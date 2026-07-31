@@ -514,11 +514,11 @@ function renderCharts(rows) {
       cutout: "58%",
       plugins: {
         legend: {
-          position: "right",
+          position: isMobileLayout() ? "bottom" : "right",
           onClick: (_e, item) => toggleFilter("sistema", sistemaLabels[item.index]),
           labels: {
             boxWidth: 12,
-            font: { size: 11 },
+            font: { size: isMobileLayout() ? 10 : 11 },
             generateLabels(chart) {
               const ds = chart.data.datasets[0];
               return chart.data.labels.map((label, i) => {
@@ -722,11 +722,10 @@ function render() {
 
 function setFiltersOpen(open) {
   document.body.classList.toggle("filters-open", open);
-  document.body.style.overflow = open ? "hidden" : "";
   const btn = el("btnToggleFiltros");
   const backdrop = el("filtersBackdrop");
   if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
-  if (backdrop) backdrop.hidden = !open;
+  if (backdrop) backdrop.hidden = true;
 }
 
 function setupMobileFilters() {
@@ -744,7 +743,12 @@ function setupMobileFilters() {
 
   window.addEventListener("resize", () => {
     if (window.innerWidth > 900) close();
+    Object.values(state.charts).forEach((c) => c?.resize?.());
   });
+}
+
+function isMobileLayout() {
+  return window.matchMedia("(max-width: 900px)").matches;
 }
 
 document.addEventListener("DOMContentLoaded", async () => {

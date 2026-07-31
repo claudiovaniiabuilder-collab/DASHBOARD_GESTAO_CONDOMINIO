@@ -720,8 +720,37 @@ function render() {
   renderTable(rows);
 }
 
+function setFiltersOpen(open) {
+  document.body.classList.toggle("filters-open", open);
+  document.body.style.overflow = open ? "hidden" : "";
+  const btn = el("btnToggleFiltros");
+  const backdrop = el("filtersBackdrop");
+  if (btn) btn.setAttribute("aria-expanded", open ? "true" : "false");
+  if (backdrop) backdrop.hidden = !open;
+}
+
+function setupMobileFilters() {
+  const open = () => setFiltersOpen(true);
+  const close = () => setFiltersOpen(false);
+  const toggle = () => setFiltersOpen(!document.body.classList.contains("filters-open"));
+
+  el("btnToggleFiltros")?.addEventListener("click", toggle);
+  el("btnCloseFiltros")?.addEventListener("click", close);
+  el("filtersBackdrop")?.addEventListener("click", close);
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+  });
+
+  window.addEventListener("resize", () => {
+    if (window.innerWidth > 900) close();
+  });
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   try {
+    setupMobileFilters();
+
     const raw = await carregarBase();
     state.data = enriquecer(raw);
 

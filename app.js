@@ -72,12 +72,32 @@ function showBootError(msg) {
 }
 
 async function carregarBase() {
-  // 1) data.js já injetou window.INCONFORMIDADES
+  const cfg = window.DASHBOARD_CONFIG || {};
+  const sheetsUrl = String(cfg.sheetsJsonUrl || "").trim();
+
+  // 1) Google Sheets (Apps Script Web App)
+  if (sheetsUrl) {
+    try {
+      const url = cfg.cacheBust
+        ? `${sheetsUrl}${sheetsUrl.includes("?") ? "&" : "?"}t=${Date.now()}`
+        : sheetsUrl;
+      const res = await fetch(url, { cache: "no-store", redirect: "follow" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+      if (json && json.error) throw new Error(json.error);
+      if (Array.isArray(json) && json.length) return json;
+      throw new Error("Planilha retornou lista vazia");
+    } catch (err) {
+      console.warn("Falha ao carregar Google Sheets:", err);
+    }
+  }
+
+  // 2) data.js já injetou window.INCONFORMIDADES
   if (Array.isArray(window.INCONFORMIDADES) && window.INCONFORMIDADES.length) {
     return window.INCONFORMIDADES;
   }
 
-  // 2) fallback: JSON da pasta data/
+  // 3) fallback: JSON da pasta data/
   try {
     const res = await fetch("data/inconformidades.json", { cache: "no-store" });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

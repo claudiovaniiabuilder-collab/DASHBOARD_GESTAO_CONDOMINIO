@@ -1,0 +1,3 @@
+ID_LAUDO;Ano;Mes;Sistema;Subsistema;Descricao;Tipo_Falha;Gravidade;Urgencia;Tendencia;GUT;Prioridade;Responsavel;Local;Detalhe_Unidade;Status_Correcao;Data_Conclusao
+002/2024;2024;01;Civil;Playground;Fixações de brinquedos sem acabamento de proteção;Segurança;;;;;1;Condomínio;Área comum;;Aberto;
+003/2024;2024;01;Incêndio;Iluminação de emergência;Luminárias inoperantes;Manutenção;5;5;4;100;1;Condomínio;Área comum;;Aberto;

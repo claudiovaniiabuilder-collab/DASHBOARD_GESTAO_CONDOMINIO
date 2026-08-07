@@ -1,0 +1,55 @@
+SETUP — Google Sheets + Dashboard (opção 1)
+==========================================
+
+A) Criar a planilha do cliente
+------------------------------
+1. Acesse https://sheets.google.com e crie uma planilha nova.
+2. Arquivo → Importar → Upload → escolha:
+     data/inconformidades.csv
+   (separador: ponto e vírgula)
+3. Compartilhe a planilha com o e-mail do cliente (Editor).
+4. Você fica como proprietário.
+
+B) Ligar a planilha ao dashboard (atualização automática)
+--------------------------------------------------------
+1. Na planilha: Extensões → Apps Script
+2. Apague o código padrão e cole o conteúdo de:
+     google-apps-script/Code.gs
+3. Salve (Ctrl+S).
+4. Implantar → Nova implantação → Tipo: App da Web
+   - Descrição: Dashboard JSON
+   - Executar como: Eu
+   - Quem tem acesso: Qualquer pessoa
+5. Autorize a conta Google quando pedido.
+6. Copie a URL (termina com /exec).
+7. No projeto, abra config.js e cole:
+     sheetsJsonUrl: "https://script.google.com/macros/s/XXXX/exec"
+8. Publique o site de novo (GitHub Pages / Netlify / domínio do cliente).
+
+C) Como o cliente atualiza
+--------------------------
+1. Abre a planilha no Google Sheets.
+2. Edita linhas (status, novas inconformidades, etc.).
+3. Salva (automático no Sheets).
+4. Atualiza o dashboard no navegador — os dados vêm da planilha.
+
+D) Domínio privado do cliente
+-----------------------------
+1. Hospede a pasta do dashboard (Netlify, Cloudflare Pages ou Vercel).
+2. Aponte o domínio (ex.: dashboard.cliente.com.br).
+3. Ative proteção por senha (Netlify Password / Cloudflare Access).
+4. Mantenha config.js com a URL do Apps Script.
+
+E) Teste rápido
+---------------
+1. No Apps Script: selecionar testarLeitura → Executar → ver Logs.
+2. Abrir a URL /exec no navegador: deve aparecer um JSON (lista).
+3. Abrir o dashboard: KPIs devem bater com a planilha.
+
+F) Colunas obrigatórias (1ª linha)
+----------------------------------
+ID_LAUDO | Ano | Mes | Sistema | Subsistema | Descricao | Tipo_Falha |
+Gravidade | Urgencia | Tendencia | GUT | Prioridade | Responsavel |
+Local | Detalhe_Unidade | Status_Correcao | Data_Conclusao
+
+Não renomeie esses cabeçalhos.

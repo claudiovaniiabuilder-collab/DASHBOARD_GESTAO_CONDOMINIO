@@ -27,20 +27,93 @@ const MES_ALIAS = {
   dez: "12", dezembro: "12",
 };
 
+const SISTEMAS_CANONICOS = [
+  "Civil",
+  "Elétrico",
+  "Proteção Contra Incêndio",
+  "Telecomunicações",
+  "Segurança",
+  "Transporte Vertical",
+  "Gestão Técnica",
+];
+
 const SISTEMA_COLORS = {
-  "Elétrico": "#2f5d8a",
-  "Incêndio": "#d64545",
   "Civil": "#3d8f84",
-  "Hidráulico": "#e6a817",
-  "Gás": "#8b5cf6",
-  "Telecom": "#0e7490",
+  "Elétrico": "#2f5d8a",
+  "Proteção Contra Incêndio": "#d64545",
+  "Telecomunicações": "#0e7490",
   "Segurança": "#c2410c",
-  "Climatização": "#64748b",
-  "SPDA": "#1d4ed8",
-  "Operacional": "#6b7280",
-  "Ventilação": "#059669",
-  "Gestão": "#a16207",
+  "Transporte Vertical": "#7c3aed",
+  "Gestão Técnica": "#a16207",
 };
+
+/** Mapeia nomes legados da planilha → sistema canônico Vistrat (chaves sem acento) */
+const SISTEMA_MAP = {
+  civil: "Civil",
+  eletrico: "Elétrico",
+  incendio: "Proteção Contra Incêndio",
+  "protecao contra incendio": "Proteção Contra Incêndio",
+  spda: "Proteção Contra Incêndio",
+  telecom: "Telecomunicações",
+  telecomunicacoes: "Telecomunicações",
+  seguranca: "Segurança",
+  hidraulico: "Civil",
+  hidrossanitario: "Civil",
+  gas: "Civil",
+  climatizacao: "Civil",
+  ventilacao: "Civil",
+  operacional: "Gestão Técnica",
+  gestao: "Gestão Técnica",
+  "gestao tecnica": "Gestão Técnica",
+  "transporte vertical": "Transporte Vertical",
+  elevadores: "Transporte Vertical",
+  elevador: "Transporte Vertical",
+};
+
+function normalizarChaveSistema(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+}
+
+function mapearSistema(sistema, subsistema) {
+  const raw = String(sistema || "").trim();
+  if (!raw) return "Gestão Técnica";
+
+  const key = normalizarChaveSistema(raw);
+  if (SISTEMA_MAP[key]) return SISTEMA_MAP[key];
+
+  // Já canônico
+  if (SISTEMAS_CANONICOS.includes(raw)) return raw;
+  const canonHit = SISTEMAS_CANONICOS.find((s) => normalizarChaveSistema(s) === key);
+  if (canonHit) return canonHit;
+
+  const sub = normalizarChaveSistema(subsistema);
+  if (
+    sub.includes("spda") ||
+    sub.includes("hidrante") ||
+    sub.includes("extintor") ||
+    sub.includes("corta-fogo") ||
+    sub.includes("corta fogo") ||
+    sub.includes("iluminacao de emergencia") ||
+    sub.includes("alarme de emergencia")
+  ) {
+    return "Proteção Contra Incêndio";
+  }
+  if (sub.includes("elevador") || sub.includes("plataforma")) {
+    return "Transporte Vertical";
+  }
+  if (sub.includes("cftv") || sub.includes("acesso") || sub.includes("portao")) {
+    return "Segurança";
+  }
+  if (sub.includes("interfon") || sub.includes("telefonia") || sub.includes("dados") || sub === "tv") {
+    return "Telecomunicações";
+  }
+
+  return raw;
+}
 
 const FILTER_KEYS = ["ano", "mes", "sistema", "tipo", "local", "status", "prioridade"];
 const FILTER_LABELS = {
@@ -111,10 +184,14 @@ function enriquecer(raw) {
     let mes = normalizarMes(d.mes);
     // Sem mês na planilha: agrupa no ponto anual (00) para não sumir dos gráficos
     if (ano && !mes) mes = "00";
+    const sistemaOriginal = String(d.sistema || "").trim();
+    const sistema = mapearSistema(sistemaOriginal, d.subsistema);
     return {
       ...d,
       ano,
       mes,
+      sistemaOriginal,
+      sistema,
       localPublico: normalizarLocal(d.local),
     };
   }).filter((d) => d.ano || d.descricao || d.id);
@@ -267,7 +344,10 @@ function setupFilters() {
     el("fMes").appendChild(opt);
   });
 
-  fillSelect(el("fSistema"), uniqueSorted(state.data.map((d) => d.sistema)));
+  fillSelect(
+    el("fSistema"),
+    groupCountSistemas(state.data).map(([nome]) => nome)
+  );
   fillSelect(el("fTipo"), uniqueSorted(state.data.map((d) => d.tipoFalha)));
   fillSelect(el("fLocal"), ["Área comum", "Unidade"]);
   fillSelect(el("fStatus"), uniqueSorted(state.data.map((d) => d.status)));
@@ -475,6 +555,21 @@ function groupCount(rows, keyFn) {
   return [...map.entries()].sort((a, b) => b[1] - a[1]);
 }
 
+function groupCountSistemas(rows) {
+  const map = new Map();
+  rows.forEach((r) => {
+    const k = r.sistema || "Não informado";
+    map.set(k, (map.get(k) || 0) + 1);
+  });
+  const ordered = SISTEMAS_CANONICOS
+    .filter((nome) => map.has(nome))
+    .map((nome) => [nome, map.get(nome)]);
+  const extras = [...map.entries()]
+    .filter(([nome]) => !SISTEMAS_CANONICOS.includes(nome))
+    .sort((a, b) => b[1] - a[1]);
+  return [...ordered, ...extras];
+}
+
 function applyPeriodFromPoint(point) {
   if (!point) return;
   if (state.filters.ano === point.ano && state.filters.mes === point.mes) {
@@ -588,7 +683,7 @@ function renderCharts(rows) {
   });
   onChartClick("linha", (hit) => applyPeriodFromPoint(cumul[hit.index]));
 
-  const sistemaEntries = groupCount(rows, (r) => r.sistema);
+  const sistemaEntries = groupCountSistemas(rows);
   const sistemaLabels = sistemaEntries.map(([k]) => k);
   const sistemaColors = dimColors(
     sistemaEntries.map(([k], i) =>
@@ -644,7 +739,7 @@ function renderCharts(rows) {
   onChartClick("donut", (hit) => toggleFilter("sistema", sistemaLabels[hit.index]));
 
   // Barras empilhadas por sistema (como no modelo)
-  const sistemasTop = groupCount(state.data, (r) => r.sistema).slice(0, 5).map(([k]) => k);
+  const sistemasTop = groupCountSistemas(state.data).slice(0, 5).map(([k]) => k);
   const barLabels = mensal.map((p) => p.label);
   const barDatasets = sistemasTop.map((sistema, i) => {
     const color = SISTEMA_COLORS[sistema] || ["#2f5d8a", "#d64545", "#3d8f84", "#e6a817", "#8b5cf6"][i % 5];
@@ -801,7 +896,7 @@ function renderTable(rows) {
     return `
       <tr>
         <td><strong>${r.id || "—"}</strong><div class="muted">${periodo}</div></td>
-        <td>${r.sistema || "—"}<div class="muted">${r.subsistema || ""}</div></td>
+        <td>${r.sistema || "—"}<div class="muted">${r.subsistema || r.sistemaOriginal || ""}</div></td>
         <td class="desc-cell">${descricao}</td>
         <td>${r.tipoFalha || "—"}</td>
         <td>${r.gut ?? "—"}</td>

@@ -60,7 +60,7 @@ body {
 
 .topbar {
   display: grid;
-  grid-template-columns: 220px 1fr 150px;
+  grid-template-columns: minmax(200px, 280px) 1fr 150px;
   align-items: center;
   gap: 12px;
   padding: 14px 20px;
@@ -72,20 +72,16 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
-.brand-text strong {
+.logo {
   display: block;
-  font-size: 0.92rem;
-  color: var(--navy);
-  letter-spacing: 0.02em;
-}
-
-.brand-text span {
-  font-size: 0.7rem;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  width: auto;
+  max-width: 100%;
+  height: 52px;
+  object-fit: contain;
+  object-position: left center;
 }
 
 .topbar-title { text-align: center; }
@@ -734,7 +730,7 @@ tr:hover td { background: #f8fbfa; }
     font-size: 0.78rem;
   }
 
-  .logo svg { width: 34px; height: 34px; }
+  .logo { height: 40px; }
 
   .kpis {
     grid-template-columns: 1fr 1fr;
@@ -816,7 +812,7 @@ tr:hover td { background: #f8fbfa; }
 
   .topbar-title h1 { font-size: 0.92rem; }
 
-  .brand-text span { display: none; }
+  .logo { height: 34px; }
 
   .bi-bar {
     flex-wrap: wrap;

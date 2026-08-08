@@ -8,7 +8,7 @@
   <title>Vistrat · Dashboard Executivo · Condomínio Palladium</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <link rel="stylesheet" href="styles.css?v=20260808d" />
+  <link rel="stylesheet" href="styles.css?v=20260808f" />
   <script src="vendor/chart.umd.min.js"></script>
 </head>
 <body>
@@ -127,9 +127,12 @@
             <div class="chart-box"><canvas id="chartLinha"></canvas></div>
           </article>
 
-          <article class="card">
+          <article class="card card-donut">
             <h3>Inconformidades por Sistema</h3>
-            <div class="chart-box"><canvas id="chartDonut"></canvas></div>
+            <div class="donut-layout">
+              <div class="chart-box chart-box-donut"><canvas id="chartDonut"></canvas></div>
+              <ul class="donut-legend" id="donutLegend" aria-label="Legenda por sistema"></ul>
+            </div>
           </article>
 
           <article class="card">
@@ -228,7 +231,7 @@
 
   <script src="config.js?v=20260808a"></script>
   <script src="data.js?v=20260731c"></script>
-  <script src="app.js?v=20260808e"></script>
+  <script src="app.js?v=20260808f"></script>
   <noscript>Ative o JavaScript para ver o dashboard.</noscript>
 </body>
 </html>

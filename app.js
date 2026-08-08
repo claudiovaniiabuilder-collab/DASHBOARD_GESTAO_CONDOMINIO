@@ -693,6 +693,26 @@ function renderCharts(rows) {
     sistemaLabels
   );
 
+  const legendEl = el("donutLegend");
+  if (legendEl) {
+    legendEl.innerHTML = sistemaEntries.map(([label, value], i) => {
+      const pct = ((value / total) * 100).toFixed(1).replace(".", ",");
+      const active = state.filters.sistema === label;
+      const dim = state.filters.sistema && !active;
+      return `
+        <button type="button"
+          class="donut-legend-item${active ? " active" : ""}${dim ? " dim" : ""}"
+          data-sistema="${label.replace(/"/g, "&quot;")}">
+          <span class="donut-legend-swatch" style="background:${sistemaColors[i]}"></span>
+          <span class="donut-legend-name">${label}</span>
+          <span class="donut-legend-pct">${pct}%</span>
+        </button>`;
+    }).join("");
+    legendEl.querySelectorAll("[data-sistema]").forEach((btn) => {
+      btn.addEventListener("click", () => toggleFilter("sistema", btn.getAttribute("data-sistema")));
+    });
+  }
+
   makeChart("donut", "chartDonut", {
     type: "doughnut",
     data: {
@@ -700,39 +720,28 @@ function renderCharts(rows) {
       datasets: [{
         data: sistemaEntries.map(([, v]) => v),
         backgroundColor: sistemaColors,
-        borderWidth: 2,
+        borderWidth: 3,
         borderColor: "#fff",
-        hoverOffset: 8,
+        hoverOffset: 6,
       }],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      cutout: "58%",
+      cutout: "62%",
       plugins: {
-        legend: {
-          position: isMobileLayout() ? "bottom" : "right",
-          onClick: (_e, item) => toggleFilter("sistema", sistemaLabels[item.index]),
-          labels: {
-            boxWidth: 12,
-            font: { size: isMobileLayout() ? 10 : 11 },
-            generateLabels(chart) {
-              const ds = chart.data.datasets[0];
-              return chart.data.labels.map((label, i) => {
-                const value = ds.data[i];
-                const pct = ((value / total) * 100).toFixed(1).replace(".", ",");
-                return {
-                  text: `${label}  ${pct}% (${value})`,
-                  fillStyle: ds.backgroundColor[i],
-                  strokeStyle: "#fff",
-                  index: i,
-                  hidden: false,
-                };
-              });
+        legend: { display: false },
+        tooltip: {
+          ...tooltipBase(total),
+          callbacks: {
+            label(ctx) {
+              const value = ctx.parsed;
+              const pct = total ? ((value / total) * 100).toFixed(1).replace(".", ",") : "0";
+              return `${ctx.label}: ${value} (${pct}%)`;
             },
+            footer() { return "Clique para filtrar o sistema"; },
           },
         },
-        tooltip: tooltipBase(total),
       },
     },
   });

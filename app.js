@@ -235,18 +235,19 @@ function applyTheme(theme) {
   try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* ignore */ }
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.setAttribute("content", next === "dark" ? "#0f141b" : "#1e3a5f");
-  const btn = el("btnTheme");
-  if (btn) {
-    btn.setAttribute("aria-pressed", next === "dark" ? "true" : "false");
-    btn.title = next === "dark" ? "Tema escuro (clique para claro)" : "Tema claro (clique para escuro)";
-  }
+  document.querySelectorAll("[data-theme-set]").forEach((btn) => {
+    btn.classList.toggle("active", btn.getAttribute("data-theme-set") === next);
+    btn.setAttribute("aria-pressed", btn.getAttribute("data-theme-set") === next ? "true" : "false");
+  });
 }
 
 function setupThemeToggle() {
   applyTheme(isDarkTheme() ? "dark" : "light");
-  el("btnTheme")?.addEventListener("click", () => {
-    applyTheme(isDarkTheme() ? "light" : "dark");
-    if (state.data.length) render();
+  document.querySelectorAll("[data-theme-set]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      applyTheme(btn.getAttribute("data-theme-set"));
+      if (state.data.length) render();
+    });
   });
 }
 

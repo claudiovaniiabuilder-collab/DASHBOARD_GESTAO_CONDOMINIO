@@ -1,5 +1,5 @@
 /**
- * MD Engenharia — API JSON do Dashboard
+ * Vistrat Engenharia — API JSON do Dashboard
  *
  * Como usar:
  * 1. No Google Sheets: Extensões → Apps Script
@@ -17,20 +17,28 @@ var HEADER_MAP = {
   ID_LAUDO: "id",
   Ano: "ano",
   Mes: "mes",
+  "Mês": "mes",
+  MES: "mes",
   Sistema: "sistema",
   Subsistema: "subsistema",
   Descricao: "descricao",
+  "Descrição": "descricao",
   Tipo_Falha: "tipoFalha",
   Gravidade: "gravidade",
   Urgencia: "urgencia",
+  "Urgência": "urgencia",
   Tendencia: "tendencia",
+  "Tendência": "tendencia",
   GUT: "gut",
   Prioridade: "prioridade",
   Responsavel: "responsavel",
+  "Responsável": "responsavel",
   Local: "local",
   Detalhe_Unidade: "detalheUnidade",
   Status_Correcao: "status",
+  "Status_Correção": "status",
   Data_Conclusao: "dataConclusao",
+  "Data_Conclusão": "dataConclusao",
 };
 
 function doGet(e) {
@@ -86,18 +94,35 @@ function linhaVazia_(row) {
 function normalizarValor_(key, value) {
   if (value === "" || value === null || value === undefined) return null;
 
+  // Coluna Mês: se Sheets converter para data, extrai o mês (01–12)
+  if (key === "mes" && value instanceof Date) {
+    return ("0" + (value.getMonth() + 1)).slice(-2);
+  }
+
   if (value instanceof Date) {
     return Utilities.formatDate(value, Session.getScriptTimeZone(), "yyyy-MM-dd");
   }
 
   if (key === "mes") {
     var mes = String(value).trim();
-    if (/^\d+$/.test(mes)) mes = ("0" + mes).slice(-2);
-    return mes;
+    var iso = mes.match(/^\d{4}-(\d{2})/);
+    if (iso) return iso[1];
+    if (/^\d+$/.test(mes)) {
+      var nMes = Number(mes);
+      if (nMes >= 1 && nMes <= 12) return ("0" + nMes).slice(-2);
+    }
+    return mes || null;
+  }
+
+  if (key === "ano") {
+    var anoTxt = String(value).trim();
+    var anoNum = Number(anoTxt);
+    if (!isNaN(anoNum) && anoNum >= 2000 && anoNum <= 2100) return anoNum;
+    var anoMatch = anoTxt.match(/(20\d{2})/);
+    return anoMatch ? Number(anoMatch[1]) : null;
   }
 
   if (
-    key === "ano" ||
     key === "gravidade" ||
     key === "urgencia" ||
     key === "tendencia" ||

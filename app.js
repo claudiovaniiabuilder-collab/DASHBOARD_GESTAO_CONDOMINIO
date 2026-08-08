@@ -1,13 +1,30 @@
 const MES_NOME = {
+  "00": "Ano",
   "01": "Jan", "02": "Fev", "03": "Mar", "04": "Abr",
   "05": "Mai", "06": "Jun", "07": "Jul", "08": "Ago",
   "09": "Set", "10": "Out", "11": "Nov", "12": "Dez",
 };
 
 const MES_FULL = {
+  "00": "Sem mês",
   "01": "Janeiro", "02": "Fevereiro", "03": "Março", "04": "Abril",
   "05": "Maio", "06": "Junho", "07": "Julho", "08": "Agosto",
   "09": "Setembro", "10": "Outubro", "11": "Novembro", "12": "Dezembro",
+};
+
+const MES_ALIAS = {
+  jan: "01", janeiro: "01",
+  fev: "02", fevereiro: "02",
+  mar: "03", marco: "03", março: "03",
+  abr: "04", abril: "04",
+  mai: "05", maio: "05",
+  jun: "06", junho: "06",
+  jul: "07", julho: "07",
+  ago: "08", agosto: "08",
+  set: "09", setembro: "09",
+  out: "10", outubro: "10",
+  nov: "11", novembro: "11",
+  dez: "12", dezembro: "12",
 };
 
 const SISTEMA_COLORS = {
@@ -43,11 +60,64 @@ function normalizarLocal(local) {
   return "Área comum";
 }
 
+function normalizarAno(value, id) {
+  if (value !== null && value !== undefined && value !== "") {
+    const n = Number(String(value).trim());
+    if (Number.isFinite(n) && n >= 2000 && n <= 2100) return n;
+  }
+  const fromId = String(id || "").match(/\/(20\d{2})\b/);
+  if (fromId) return Number(fromId[1]);
+  return null;
+}
+
+function normalizarMes(value) {
+  if (value === null || value === undefined || value === "") return null;
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return String(value.getMonth() + 1).padStart(2, "0");
+  }
+
+  const raw = String(value).trim();
+  if (!raw) return null;
+
+  const iso = raw.match(/^\d{4}-(\d{2})(?:-\d{2})?/);
+  if (iso) {
+    const n = Number(iso[1]);
+    return n >= 1 && n <= 12 ? iso[1] : null;
+  }
+
+  if (/^\d{1,2}$/.test(raw)) {
+    const n = Number(raw);
+    return n >= 1 && n <= 12 ? String(n).padStart(2, "0") : null;
+  }
+
+  const alias = MES_ALIAS[raw.toLowerCase()];
+  if (alias) return alias;
+
+  const prefix = raw.toLowerCase().match(/^(\d{1,2}|[a-zçã]+)/i);
+  if (prefix) {
+    if (/^\d{1,2}$/.test(prefix[1])) {
+      const n = Number(prefix[1]);
+      return n >= 1 && n <= 12 ? String(n).padStart(2, "0") : null;
+    }
+    if (MES_ALIAS[prefix[1]]) return MES_ALIAS[prefix[1]];
+  }
+
+  return null;
+}
+
 function enriquecer(raw) {
-  return (raw || []).map((d) => ({
-    ...d,
-    localPublico: normalizarLocal(d.local),
-  }));
+  return (raw || []).map((d) => {
+    const ano = normalizarAno(d.ano, d.id);
+    let mes = normalizarMes(d.mes);
+    // Sem mês na planilha: agrupa no ponto anual (00) para não sumir dos gráficos
+    if (ano && !mes) mes = "00";
+    return {
+      ...d,
+      ano,
+      mes,
+      localPublico: normalizarLocal(d.local),
+    };
+  }).filter((d) => d.ano || d.descricao || d.id);
 }
 
 const state = {
@@ -117,7 +187,12 @@ function isResolvida(status) {
 
 function uniqueSorted(values) {
   return [...new Set(values.filter((v) => v !== null && v !== undefined && v !== ""))]
-    .sort((a, b) => String(a).localeCompare(String(b), "pt-BR"));
+    .sort((a, b) => {
+      const na = Number(a);
+      const nb = Number(b);
+      if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
+      return String(a).localeCompare(String(b), "pt-BR", { numeric: true });
+    });
 }
 
 function fillSelect(select, values, allLabel = "Selecionar Tudo") {
@@ -346,22 +421,29 @@ function tooltipBase(total) {
 
 function periodoTexto(rows) {
   const anos = uniqueSorted(rows.map((r) => r.ano));
-  const meses = uniqueSorted(rows.map((r) => r.mes));
+  const meses = uniqueSorted(rows.map((r) => r.mes).filter((m) => m && m !== "00"));
   if (anos.length === 1 && meses.length === 1) {
     return `${MES_FULL[meses[0]] || meses[0]} ${anos[0]}`;
   }
   if (anos.length === 1) return String(anos[0]);
   if (anos.length > 1) return `${anos[0]}–${anos[anos.length - 1]}`;
-  return "2024–2026";
+  return "Sem período";
+}
+
+function rotuloPeriodo(ano, mes) {
+  const yy = String(ano).slice(-2);
+  if (!mes || mes === "00") return String(ano);
+  return `${MES_NOME[mes] || mes}/${yy}`;
 }
 
 function buildTimeline(rows) {
   const map = new Map();
   rows.forEach((r) => {
-    if (!r.ano || !r.mes) return;
-    const key = `${r.ano}-${r.mes}`;
+    if (!r.ano) return;
+    const mes = r.mes || "00";
+    const key = `${String(r.ano).padStart(4, "0")}-${mes}`;
     if (!map.has(key)) {
-      map.set(key, { abertas: 0, concluidas: 0, key, ano: String(r.ano), mes: r.mes });
+      map.set(key, { abertas: 0, concluidas: 0, key, ano: String(r.ano), mes });
     }
     if (isResolvida(r.status)) map.get(key).concluidas += 1;
     else map.get(key).abertas += 1;
@@ -370,7 +452,7 @@ function buildTimeline(rows) {
     .sort((a, b) => a.key.localeCompare(b.key))
     .map((p) => ({
       ...p,
-      label: `${MES_NOME[p.mes] || p.mes}/${String(p.ano).slice(2)}`,
+      label: rotuloPeriodo(p.ano, p.mes),
     }));
 }
 

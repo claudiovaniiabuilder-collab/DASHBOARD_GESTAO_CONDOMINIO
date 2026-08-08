@@ -8,7 +8,7 @@
   <title>Vistrat · Dashboard Executivo · Condomínio Palladium</title>
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
-  <link rel="stylesheet" href="styles.css?v=20260808f" />
+  <link rel="stylesheet" href="styles.css?v=20260808g" />
   <script src="vendor/chart.umd.min.js"></script>
 </head>
 <body>
@@ -125,6 +125,11 @@
               <span><i class="dot green"></i>Concluída</span>
             </div>
             <div class="chart-box"><canvas id="chartLinha"></canvas></div>
+            <div class="chart-pager" id="pagerLinha" hidden>
+              <button type="button" class="chart-pager-btn" data-timeline-dir="-1" aria-label="Período anterior">‹</button>
+              <span class="chart-pager-info" data-timeline-info>1–20</span>
+              <button type="button" class="chart-pager-btn" data-timeline-dir="1" aria-label="Próximo período">›</button>
+            </div>
           </article>
 
           <article class="card card-donut">
@@ -138,6 +143,11 @@
           <article class="card">
             <h3>Evolução das Inconformidades</h3>
             <div class="chart-box"><canvas id="chartBarras"></canvas></div>
+            <div class="chart-pager" id="pagerBarras" hidden>
+              <button type="button" class="chart-pager-btn" data-timeline-dir="-1" aria-label="Período anterior">‹</button>
+              <span class="chart-pager-info" data-timeline-info>1–20</span>
+              <button type="button" class="chart-pager-btn" data-timeline-dir="1" aria-label="Próximo período">›</button>
+            </div>
             <div class="card-note" id="cardNote">No período, <strong>0</strong> inconformidades foram resolvidas.</div>
           </article>
 
@@ -231,7 +241,7 @@
 
   <script src="config.js?v=20260808a"></script>
   <script src="data.js?v=20260731c"></script>
-  <script src="app.js?v=20260808f"></script>
+  <script src="app.js?v=20260808g"></script>
   <noscript>Ative o JavaScript para ver o dashboard.</noscript>
 </body>
 </html>

@@ -197,6 +197,8 @@ function enriquecer(raw) {
   }).filter((d) => d.ano || d.descricao || d.id);
 }
 
+const TIMELINE_PAGE_SIZE = 20;
+
 const state = {
   data: [],
   charts: {},
@@ -204,6 +206,8 @@ const state = {
     ano: "", mes: "", sistema: "", tipo: "", local: "", status: "", prioridade: "",
   },
   syncing: false,
+  /** null = ir para a página mais recente ao renderizar */
+  timelinePage: null,
 };
 
 const el = (id) => document.getElementById(id);
@@ -291,18 +295,21 @@ function fillSelect(select, values, allLabel = "Selecionar Tudo") {
 function toggleFilter(key, value) {
   const next = String(value ?? "");
   state.filters[key] = state.filters[key] === next ? "" : next;
+  state.timelinePage = null;
   syncSelectsFromState();
   render();
 }
 
 function setFilter(key, value) {
   state.filters[key] = String(value ?? "");
+  state.timelinePage = null;
   syncSelectsFromState();
   render();
 }
 
 function clearFilters() {
   FILTER_KEYS.forEach((k) => { state.filters[k] = ""; });
+  state.timelinePage = null;
   syncSelectsFromState();
   render();
 }
@@ -372,6 +379,7 @@ function setupFilters() {
     el(id).addEventListener("change", () => {
       if (state.syncing) return;
       readSelectsToState();
+      state.timelinePage = null;
       render();
     });
   });
@@ -579,8 +587,66 @@ function applyPeriodFromPoint(point) {
     state.filters.ano = point.ano;
     state.filters.mes = point.mes;
   }
+  state.timelinePage = null;
   syncSelectsFromState();
   render();
+}
+
+function getTimelineWindow(items) {
+  const total = items.length;
+  const pageCount = Math.max(1, Math.ceil(total / TIMELINE_PAGE_SIZE) || 1);
+
+  if (state.timelinePage == null || state.timelinePage >= pageCount) {
+    state.timelinePage = pageCount - 1;
+  }
+  if (state.timelinePage < 0) state.timelinePage = 0;
+
+  const start = state.timelinePage * TIMELINE_PAGE_SIZE;
+  const end = Math.min(start + TIMELINE_PAGE_SIZE, total);
+  return {
+    items: items.slice(start, end),
+    start,
+    end,
+    page: state.timelinePage,
+    pageCount,
+    total,
+  };
+}
+
+function updateTimelinePagers(windowInfo) {
+  const { start, end, page, pageCount, total } = windowInfo;
+  const show = total > TIMELINE_PAGE_SIZE;
+  const label = total
+    ? `${start + 1}–${end} de ${total}`
+    : "0 itens";
+
+  ["pagerLinha", "pagerBarras"].forEach((id) => {
+    const pager = el(id);
+    if (!pager) return;
+    pager.hidden = !show;
+    const info = pager.querySelector("[data-timeline-info]");
+    if (info) info.textContent = label;
+    pager.querySelectorAll("[data-timeline-dir]").forEach((btn) => {
+      const dir = Number(btn.getAttribute("data-timeline-dir"));
+      btn.disabled = dir < 0 ? page <= 0 : page >= pageCount - 1;
+    });
+  });
+}
+
+function shiftTimelinePage(dir) {
+  if (state.timelinePage == null) state.timelinePage = 0;
+  state.timelinePage += dir;
+  render();
+}
+
+function setupTimelinePagers() {
+  document.querySelectorAll("[data-timeline-dir]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const dir = Number(btn.getAttribute("data-timeline-dir"));
+      if (!Number.isFinite(dir) || dir === 0) return;
+      shiftTimelinePage(dir);
+    });
+  });
 }
 
 function renderKpis(rows) {
@@ -629,8 +695,12 @@ function renderKpis(rows) {
 
 function renderCharts(rows) {
   const total = rows.length || 1;
-  const mensal = buildTimeline(rows);
-  const cumul = cumulativeTimeline(rows);
+  const mensalFull = buildTimeline(rows);
+  const cumulFull = cumulativeTimeline(rows);
+  const timelineWindow = getTimelineWindow(cumulFull);
+  const cumul = timelineWindow.items;
+  const mensal = mensalFull.slice(timelineWindow.start, timelineWindow.end);
+  updateTimelinePagers(timelineWindow);
 
   makeChart("linha", "chartLinha", {
     type: "line",
@@ -676,7 +746,15 @@ function renderCharts(rows) {
         },
       },
       scales: {
-        x: { grid: { display: false } },
+        x: {
+          grid: { display: false },
+          ticks: {
+            maxRotation: 45,
+            minRotation: 0,
+            autoSkip: true,
+            maxTicksLimit: TIMELINE_PAGE_SIZE,
+          },
+        },
         y: { beginAtZero: true, ticks: { precision: 0 } },
       },
     },
@@ -815,6 +893,7 @@ function renderCharts(rows) {
         state.filters.mes = point.mes;
         state.filters.sistema = sistema;
       }
+      state.timelinePage = null;
       syncSelectsFromState();
       render();
       return;
@@ -960,6 +1039,7 @@ function isMobileLayout() {
 document.addEventListener("DOMContentLoaded", async () => {
   try {
     setupMobileFilters();
+    setupTimelinePagers();
 
     const raw = await carregarBase();
     state.data = enriquecer(raw);

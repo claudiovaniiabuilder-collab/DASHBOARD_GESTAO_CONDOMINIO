@@ -537,6 +537,49 @@ body {
   color: #5c4a37;
 }
 
+.chart-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.chart-pager[hidden] {
+  display: none !important;
+}
+
+.chart-pager-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--navy);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-pager-btn:hover:not(:disabled) {
+  background: #f3f6f9;
+}
+
+.chart-pager-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.chart-pager-info {
+  font-size: 0.75rem;
+  color: var(--muted);
+  min-width: 120px;
+  text-align: center;
+}
+
 .crit-list {
   display: flex;
   flex-direction: column;

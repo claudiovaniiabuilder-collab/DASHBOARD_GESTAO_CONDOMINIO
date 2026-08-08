@@ -212,6 +212,44 @@ const state = {
 
 const el = (id) => document.getElementById(id);
 
+const THEME_KEY = "dashboard-theme";
+
+function isDarkTheme() {
+  return document.documentElement.getAttribute("data-theme") === "dark";
+}
+
+function chartTheme() {
+  const dark = isDarkTheme();
+  return {
+    tick: dark ? "#9aa8b6" : "#6b7785",
+    grid: dark ? "rgba(255,255,255,0.06)" : "rgba(31,41,51,0.06)",
+    border: dark ? "#1c2532" : "#ffffff",
+    tooltipBg: dark ? "rgba(15, 20, 27, 0.94)" : "rgba(30, 41, 59, 0.92)",
+  };
+}
+
+function applyTheme(theme) {
+  const next = theme === "dark" ? "dark" : "light";
+  if (next === "dark") document.documentElement.setAttribute("data-theme", "dark");
+  else document.documentElement.removeAttribute("data-theme");
+  try { localStorage.setItem(THEME_KEY, next); } catch (e) { /* ignore */ }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", next === "dark" ? "#0f141b" : "#1e3a5f");
+  const btn = el("btnTheme");
+  if (btn) {
+    btn.setAttribute("aria-pressed", next === "dark" ? "true" : "false");
+    btn.title = next === "dark" ? "Tema escuro (clique para claro)" : "Tema claro (clique para escuro)";
+  }
+}
+
+function setupThemeToggle() {
+  applyTheme(isDarkTheme() ? "dark" : "light");
+  el("btnTheme")?.addEventListener("click", () => {
+    applyTheme(isDarkTheme() ? "light" : "dark");
+    if (state.data.length) render();
+  });
+}
+
 function showBootError(msg) {
   const box = el("bootError");
   if (!box) {
@@ -489,8 +527,9 @@ function hexAlpha(hex, alpha) {
 }
 
 function tooltipBase(total) {
+  const theme = chartTheme();
   return {
-    backgroundColor: "rgba(30, 41, 59, 0.92)",
+    backgroundColor: theme.tooltipBg,
     padding: 10,
     cornerRadius: 8,
     callbacks: {
@@ -695,6 +734,7 @@ function renderKpis(rows) {
 
 function renderCharts(rows) {
   const total = rows.length || 1;
+  const theme = chartTheme();
   const mensalFull = buildTimeline(rows);
   const cumulFull = cumulativeTimeline(rows);
   const timelineWindow = getTimelineWindow(cumulFull);
@@ -749,13 +789,18 @@ function renderCharts(rows) {
         x: {
           grid: { display: false },
           ticks: {
+            color: theme.tick,
             maxRotation: 45,
             minRotation: 0,
             autoSkip: true,
             maxTicksLimit: TIMELINE_PAGE_SIZE,
           },
         },
-        y: { beginAtZero: true, ticks: { precision: 0 } },
+        y: {
+          beginAtZero: true,
+          ticks: { precision: 0, color: theme.tick },
+          grid: { color: theme.grid },
+        },
       },
     },
   });
@@ -799,7 +844,7 @@ function renderCharts(rows) {
         data: sistemaEntries.map(([, v]) => v),
         backgroundColor: sistemaColors,
         borderWidth: 3,
-        borderColor: "#fff",
+        borderColor: theme.border,
         hoverOffset: 6,
       }],
     },
@@ -856,7 +901,7 @@ function renderCharts(rows) {
       plugins: {
         legend: {
           position: "bottom",
-          labels: { boxWidth: 10, font: { size: 10 } },
+          labels: { boxWidth: 10, font: { size: 10 }, color: theme.tick },
           onClick: (_e, item) => toggleFilter("sistema", item.text),
         },
         tooltip: {
@@ -870,8 +915,17 @@ function renderCharts(rows) {
         },
       },
       scales: {
-        x: { stacked: true, grid: { display: false } },
-        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } },
+        x: {
+          stacked: true,
+          grid: { display: false },
+          ticks: { color: theme.tick },
+        },
+        y: {
+          stacked: true,
+          beginAtZero: true,
+          ticks: { precision: 0, color: theme.tick },
+          grid: { color: theme.grid },
+        },
       },
     },
   });
@@ -1038,6 +1092,7 @@ function isMobileLayout() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   try {
+    setupThemeToggle();
     setupMobileFilters();
     setupTimelinePagers();
 
